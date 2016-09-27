@@ -74,9 +74,3 @@ commit m.timeout := new_timeout
 commit @udp [#packet destination:p body:announcement]
 commit @timer [#timeout milliseconds:new_timeout]   
 ```
-
-if there is a message, send the message 
-```
-match [#packet]
-
-```

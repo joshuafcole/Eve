@@ -1,4 +1,5 @@
 #include <runtime.h>
+#include <bswap.h>
 
 //-------------------------------------------------------
 // Value printing
@@ -42,9 +43,15 @@ void print_value(buffer b, value v)
             break;
         }
 
-    case station_space:
-        bprintf(b, "<station>");
+    case station_space:{
+        u8 *d = v;
+        u16 *p = v;
+        // new bracket type! ipv6!
+        bprintf(b, "<%d.%d.%d.%d:%d>",
+                d[0],d[1],d[2],d[3],
+                htons(p[2]));
         break;
+    }
         
     default:
         bprintf(b, "[[[%p]]]", v);

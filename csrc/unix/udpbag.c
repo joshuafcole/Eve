@@ -5,6 +5,7 @@ typedef struct udp_bag {
     heap h;
     table channels;
     evaluation ev;
+    udp sender;
 } *udp_bag;
 
 
@@ -45,23 +46,29 @@ static void udp_commit(udp_bag ub, edb s)
     edb_foreach_e(s, e, sym(tag), sym(udp), c) {
         unsigned int host = 0;
         int port = 0;
-        edb_foreach_v(s, e, sym(port), port, c) {
+        edb_foreach_v(s, e, sym(port), pt, c) {
+            port = (int)*(double *)pt;
             // fill in port if defined
         }
-        edb_foreach_v(s, e, sym(host), port, c) {
-            // fill in port if defined
+        // as ascii i think i guess
+        edb_foreach_v(s, e, sym(host), h, c) {
+            // fill in host if defined
         }
         prf("udp commit %d\n", table_elements(ub->b.listeners));
-        udp u = create_udp(ub->h, ip_wildcard, cont(ub->h, udp_input, ub));
+        udp u = create_udp(ub->h, create_station(host, port), cont(ub->h, udp_input, ub));
         table_set(ub->channels, e, u);
     }
+
     edb_foreach_e(s, e, sym(tag), sym(packet), _) {
         edb_foreach_v(s, e, sym(destination), destination, _) {
             edb_foreach_v(s, e, sym(body), b, _) {
-                edb h = table_find(ub->ev->t_input, b);
-                prf("body: %v %p\n", b, h);
-                if (h) {
-                    prf("targ: %b\n", edb_dump(init, h));
+                edb packet = table_find(ub->ev->t_input, b);
+                if (packet) {
+                    buffer b = allocate_buffer(ub->h, 10);
+                    serialize_edb(b, packet);
+                    // send to a particular endpoint
+                    prf("upd send %v %d\n", destination, buffer_length(b));
+                    udp_write(ub->sender, destination, b);
                 }
             }
         }
@@ -98,5 +105,6 @@ bag udp_bag_init(evaluation ev)
     ub->b.block_listeners = allocate_table(h, key_from_pointer, compare_pointer);
     ub->channels = create_value_table(h);
     ub->ev = ev;
+    ub->sender = create_udp(h, ip_wildcard, cont(h, udp_input, ub)); 
     return (bag)ub;
 }

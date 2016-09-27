@@ -88,8 +88,8 @@ udp create_udp(heap h,
                    (char *)&on, sizeof(on)) < 0)
         prf("SO_SNDBUF");
     
+    prf("bind %v\n", local);
     struct sockaddr s;
-    
     if (bind (u->receive, &s, encode_sockaddrin((struct sockaddr_in *)&s, local))) {
         prf("error binding udp socket\n");
         return(0);

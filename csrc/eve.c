@@ -228,6 +228,12 @@ static void print_help(char *x)
     exit(0);
 }
 
+static CONTINUATION_0_5(printv, value, value, value, multiplicity, uuid);
+static void printv(value e, value a, value v, multiplicity c, uuid u)
+{
+    prf("%v\n", v);
+}
+
 // XXX - dont involve so much manual setup in these environments
 // we should have everything we need for a proper boot
 // its kinda mandatory to have a static bag for membership
@@ -245,12 +251,11 @@ static void start_cluster(buffer membership_source)
     table_set(persisted, sid, sb);
     table_set(scopes, sym(session), sid);
 
-    uuid p = generate_uuid();
-    apply(sb->insert, p, sym(tag), sym(peer), 1, 0);
-    //    create_station(0x7f00001, 3014)
-    apply(sb->insert, p, sym(id), sym(zikki), 1, 0);
-    prf("peer: %v\n", p);
-
+    vector_foreach(seeds, i) {
+        uuid p = generate_uuid();
+        apply(sb->insert, p, sym(tag), sym(peer), 1, 0);
+        apply(sb->insert, p, sym(id), i, 1, 0);
+    }
 
     uuid tid = generate_uuid();
     table_set(scopes, sym(timer), tid);
@@ -264,6 +269,7 @@ static void start_cluster(buffer membership_source)
     bag ub = udp_bag_init(ev);    
     table_set(persisted, uid, ub);
     
+    apply(ub->scan, s_eAv, cont(init, printv), 0, sym(address), 0);
     
     vector_insert(ev->default_scan_scopes, sid);
     vector_insert(ev->default_insert_scopes, sid);

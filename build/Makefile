@@ -67,7 +67,7 @@ luajit-2.0:
 	(cd luajit-2.0 ; git checkout v2.1.0-beta2 ; make PREFIX=$(BUILD)/lua; make install PREFIX=$(BUILD)/lua)
 
 contgen: contgen.c
-	cc $< -g -o $@
+	cc -std=c99 $< -g -o $@
 
 continuation_templates.h: contgen
 	contgen 10 10 > continuation_templates.h
