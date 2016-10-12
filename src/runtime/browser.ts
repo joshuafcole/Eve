@@ -83,7 +83,7 @@ class Responder {
         evaluation.registerDatabase("http", new HttpDatabase());
         evaluation.fixpoint();
 
-        client.socket.onopen();
+        this.socket.onopen();
       }
     }
   }
@@ -92,7 +92,7 @@ class Responder {
 export var responder: Responder;
 
 export function init(code) {
-  responder = new Responder(client.socket);
+  responder = new Responder(client.connection.socket);
 
   global["browser"] = true;
   let {results, errors} = parser.parseDoc(code || "", "editor");
@@ -112,5 +112,5 @@ export function init(code) {
   evaluation.registerDatabase("http", new HttpDatabase());
   evaluation.fixpoint();
 
-  client.socket.onopen();
+  client.connection.socket.onopen();
 }

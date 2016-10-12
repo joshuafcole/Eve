@@ -38,7 +38,7 @@ class Navigator {
   };
   open: boolean = true;
 
-  constructor(public ide:IDE, public rootId = "root", public nodes:TreeMap = {root: {type: "folder", name: "/", children: []}}, public currentId:string = rootId) {}
+  constructor(public ide:IDE, public rootId = "root", public nodes:TreeMap = {root: {type: "folder", name: "", open: true}}, public currentId:string = rootId) {}
 
   currentType():string {
     let node = this.nodes[this.currentId];
@@ -215,12 +215,25 @@ class Navigator {
   toggleElision = (event, {nodeId}) => {
     let node = this.nodes[nodeId];
     if(!node) return;
-    this.ide.editor.cm.operation( () => {
+    this.ide.editor.cm.operation(() => {
       this.doElide(nodeId, !node.hidden);
       this.walk(nodeId, this._inheritParentElision);
     })
     this.ide.render();
     event.stopPropagation();
+  }
+
+  deleteNode = (event, {nodeId}) => {
+    let node = this.nodes[nodeId];
+    if(!node) return;
+    if(node.type === "document") {
+      let directory = this.currentId;
+      this.ide.deleteFile(directory, nodeId);
+    }
+  }
+
+  createDocument = (event, {nodeId}) => {
+    this.ide.createFile(nodeId)
   }
 
   // Elements
@@ -239,12 +252,18 @@ class Navigator {
       subtree = {c: "tree-items", children: items};
     }
 
+    if(nodeId === this.rootId) {
+      return {c: `tree-item branch ${node.type}`, nodeId, children: [
+        subtree
+      ]};
+    }
+
     return {c: `tree-item ${subtree ? "branch" : "leaf"} ${node.type} ${subtree && !node.open ? "collapsed" : ""}`, nodeId, children: [
       {c: "flex-row", children: [
         {c: `label ${subtree ? "ion-ios-arrow-down" : "no-icon"}`, text: node.name, nodeId, click: subtree ? this.toggleBranch : this.navigate}, // icon should be :before
         {c: "controls", children: [
-          subtree ? {c: "new-btn ion-ios-plus-empty", click: () => console.log("new folder or document")} : undefined,
-          {c: "delete-btn ion-ios-close-empty", click: () => console.log("delete folder or document w/ confirmation")}
+          subtree ? {c: "new-btn ion-ios-plus-empty", nodeId, click: this.createDocument} : undefined,
+          {c: "delete-btn ion-ios-close-empty", nodeId, click: this.deleteNode}
         ]}
       ]},
       subtree
@@ -1790,9 +1809,38 @@ export class IDE {
     this.onLoadFile(this, docId, code);
   }
 
-  loadWorkspace(directory:string, files:{[filename:string]: string}) {
+  deleteFile(directory:string, docId:string) {
+    if(this.documentId === docId) {
+      // @TODO: confirmation modal
+      console.error("Unable to delete currently open document");
+      return;
+    }
+    delete this._fileCache[docId];
+    this.navigator.loadWorkspace("root", directory, this._fileCache);
+    this.render();
+  }
+
+  createFile(directory:string) {
+    let rawLocalFiles = localStorage.getItem("local-files");
+    let localFiles = rawLocalFiles ? JSON.parse(rawLocalFiles) : {};
+    let ix = 0;
+    let name;
+    do {
+      name = `Untitled ${ix ? ix : ""}.eve`;
+      if(!localFiles[name]) break;
+      ix++;
+    } while(true);
+
+    localFiles[name] = "";
+    localStorage.setItem("local-files", JSON.stringify(localFiles));
+    this._fileCache[name] = localFiles[name];
+    this.navigator.loadWorkspace("root", "local", this._fileCache);
+    this.render();
+  }
+
+  loadWorkspace(id: string, name:string, files:{[filename:string]: string}) {
     this._fileCache = files;
-    this.navigator.loadWorkspace("root", directory, files);
+    this.navigator.loadWorkspace(id, name, files);
   }
 
   loadDocument(generation:number, text:string, packed:any[], attributes:{[id:string]: any|undefined}) {

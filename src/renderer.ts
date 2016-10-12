@@ -2,7 +2,7 @@
 
 import {Renderer} from "microReact";
 import {clone} from "./util";
-import {sendEvent, indexes} from "./client";
+import {connection} from "./client";
 
 //type RecordElementCollection = HTMLCollection | SVGColl
 interface RecordElement extends Element { entity?: string, sort?: any, _parent?: RecordElement|null, style?: CSSStyleDeclaration };
@@ -81,6 +81,7 @@ export function renderRecords() {
     lastActiveElement = document.activeElement;
   }
 
+  let indexes = connection.indexes;
   let records = indexes.records.index;
   let dirty = indexes.dirty.index;
   let activeClasses = indexes.byClass.index || {};
@@ -310,7 +311,9 @@ export function renderRecords() {
 //---------------------------------------------------------
 // Event bindings to forward events to the server
 //---------------------------------------------------------
-
+function sendEvent(objs) {
+  connection.sendEvent(objs);
+}
 window.addEventListener("click", function(event) {
   let {target} = event;
   let current = target as RecordElement;
